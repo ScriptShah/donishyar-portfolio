@@ -1,0 +1,21 @@
+{
+  "name": "ts-portfolio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/space-grotesk": "^5.0.0",
+    "@fontsource/space-mono": "^5.0.0",
+    "gsap": "^3.12.0",
+    "three": ">=0.170.0 <1.0.0"
+  },
+  "devDependencies": {
+    "pdf-parse": "^1.1.1",
+    "vite": ">=5.0.0"
+  }
+}

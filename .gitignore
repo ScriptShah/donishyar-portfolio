@@ -1,0 +1,9 @@
+node_modules/
+dist/
+work-archive/
+.claude/
+.playwright-mcp/
+*.log
+*.tmp.mp4
+Thumbs.db
+.DS_Store
