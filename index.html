@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donishyar — Graphic Designer</title>
+  <meta name="description" content="Portfolio of Ahmad Shah Donishyar — multidisciplinary graphic designer crafting identities, campaigns & motion." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233d7bff'/%3E%3Ctext x='16' y='21.5' text-anchor='middle' font-size='13' font-weight='bold' font-family='Arial' fill='white'%3EAD%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <!-- film grain + vignette -->
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- ======= HEADER ======= -->
+  <header id="header">
+    <a class="logo" href="#" id="logo" aria-label="Home">
+      <span class="logo-mark">AD</span>
+      <span class="logo-type">DONISHYAR<sup>®</sup></span>
+    </a>
+
+    <button class="sound mono" id="sound-btn" aria-label="Toggle sound">
+      <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      SOUND [<span id="sound-state">OFF</span>]
+    </button>
+
+    <p class="intro-copy mono" id="intro-copy"></p>
+
+    <div class="clocks mono" id="clocks"></div>
+
+    <a class="talk" id="talk-btn" href="#">Let's Talk</a>
+  </header>
+
+  <!-- ======= BOTTOM UI ======= -->
+  <nav class="dock" id="dock">
+    <button class="active" data-nav="work">Work</button>
+    <button data-nav="about">About</button>
+    <button data-nav="contact">Contact</button>
+  </nav>
+
+  <div class="view-toggle" id="view-toggle">
+    <button class="active" id="btn-sphere" aria-label="Sphere view">
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+    </button>
+    <button id="btn-list" aria-label="List view">
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+    </button>
+  </div>
+
+  <button class="filter-btn" id="filter-btn">Filter</button>
+  <div class="filter-panel" id="filter-panel"></div>
+
+  <p class="hint mono" id="hint">[ DRAG TO EXPLORE ]</p>
+
+  <!-- crisp DOM readout for the hovered card -->
+  <div class="hover-info" id="hover-info" aria-hidden="true">
+    <span class="hi-title"></span>
+    <span class="hi-meta mono"></span>
+    <span class="hi-tags mono"></span>
+  </div>
+
+  <!-- azimuth compass — one notch per project, click to fly -->
+  <div class="compass" id="compass" aria-hidden="true">
+    <div class="compass-center"></div>
+  </div>
+
+  <!-- custom cursor -->
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <div class="c-ring"><span class="c-label mono"></span></div>
+    <div class="c-dot"></div>
+  </div>
+
+  <!-- ======= LIST VIEW ======= -->
+  <section class="list-view" id="list-view" aria-hidden="true">
+    <div class="list-head mono">
+      <span>NO.</span><span>PROJECT</span><span>CLIENT</span><span>CATEGORY</span><span>YEAR</span>
+    </div>
+    <div class="list-rows" id="list-rows"></div>
+  </section>
+
+  <!-- ======= DETAIL / ABOUT / CONTACT PAGE ======= -->
+  <section class="page" id="page" aria-hidden="true">
+    <div class="page-bar">
+      <button class="back mono" id="page-back">&larr; BACK TO WORK</button>
+      <span class="mono" id="page-index"></span>
+    </div>
+    <div class="page-wrap" id="page-wrap"></div>
+  </section>
+
+  <!-- ======= LOADER ======= -->
+  <div class="loader" id="loader">
+    <div class="loader-center">
+      <span class="loader-mark">AD</span>
+      <div class="loader-count mono"><span id="loader-num">000</span></div>
+      <p class="mono" id="loader-label">DONISHYAR® — SELECTED WORK ©2018–2026</p>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
