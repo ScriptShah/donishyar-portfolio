@@ -407,7 +407,7 @@ export const PROJECTS = [
       "3D",
       "ANIMATION"
     ],
-    "cover": "/work/post17_frame0.jpg",
+    "cover": "/work/post17_cover0.jpg",
     "preview": "/work/post17_video0.mp4",
     "media": [
       {
@@ -523,7 +523,7 @@ export const PROJECTS = [
       "BEVERAGE",
       "CAMPAIGN"
     ],
-    "cover": "/work/post333_frame2.jpg",
+    "cover": "/work/post333_cover2.jpg",
     "preview": "/work/post333_video2.mp4",
     "media": [
       {
@@ -808,7 +808,7 @@ export const PROJECTS = [
       "LEMONADE",
       "CAMPAIGN"
     ],
-    "cover": "/work/post165_frame0.jpg",
+    "cover": "/work/post165_cover0.jpg",
     "preview": "/work/post165_video0.mp4",
     "media": [
       {
@@ -1112,7 +1112,7 @@ export const PROJECTS = [
       "ANIMATION",
       "BEVERAGE"
     ],
-    "cover": "/work/post35_frame0.jpg",
+    "cover": "/work/post35_cover0.jpg",
     "preview": "/work/post35_video0.mp4",
     "media": [
       {
@@ -1296,7 +1296,7 @@ export const PROJECTS = [
       "JUICE",
       "PRODUCT"
     ],
-    "cover": "/work/post187_frame2.jpg",
+    "cover": "/work/post187_cover2.jpg",
     "preview": "/work/post187_video2.mp4",
     "media": [
       {
@@ -1433,7 +1433,7 @@ export const PROJECTS = [
       "EXPERIMENT",
       "MOTION"
     ],
-    "cover": "/work/post339_frame0.jpg",
+    "cover": "/work/post339_cover0.jpg",
     "preview": "/work/post339_video0.mp4",
     "media": [
       {
@@ -1490,7 +1490,7 @@ export const PROJECTS = [
       "CAMPAIGN",
       "PACKAGING"
     ],
-    "cover": "/work/post302_frame0.jpg",
+    "cover": "/work/post302_cover0.jpg",
     "preview": "/work/post302_video0.mp4",
     "media": [
       {
@@ -1596,7 +1596,7 @@ export const PROJECTS = [
       "ANIMATION",
       "DAIRY"
     ],
-    "cover": "/work/post270_frame0.jpg",
+    "cover": "/work/post270_cover0.jpg",
     "preview": "/work/post270_video0.mp4",
     "media": [
       {
@@ -1659,7 +1659,7 @@ export const PROJECTS = [
       "REELS",
       "HEALTHCARE"
     ],
-    "cover": "/work/post74_frame0.jpg",
+    "cover": "/work/post74_cover0.jpg",
     "preview": "/work/post74_video0.mp4",
     "media": [
       {
@@ -1695,7 +1695,7 @@ export const PROJECTS = [
       "EXPLAINER",
       "PROMO"
     ],
-    "cover": "/work/post91_frame0.jpg",
+    "cover": "/work/post91_cover0.jpg",
     "preview": "/work/post91_video0.mp4",
     "media": [
       {

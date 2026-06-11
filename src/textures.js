@@ -614,6 +614,8 @@ export function makeImageArtCanvas(img, aspect, width = 1024) {
   c.width = width;
   c.height = Math.round(width / aspect);
   const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high'; // best resampling for HQ covers
   ctx.save();
   rr(ctx, 0, 0, c.width, c.height, 12);
   ctx.clip();

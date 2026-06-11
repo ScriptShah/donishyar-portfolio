@@ -70,10 +70,13 @@ for (const p of result.final) {
   if (!media.length && p.cover && exists(p.cover)) media.push({ type: 'image', src: `/work/${p.cover}` });
   if (!media.length) { console.log('SKIP (no media):', p.title); continue; }
 
-  const cover = p.cover && exists(p.cover)
+  let cover = p.cover && exists(p.cover)
     ? `/work/${p.cover}`
     : media.find((m) => m.type === 'image')?.src || media[0].poster;
   if (!cover) { console.log('SKIP (no cover):', p.title); continue; }
+  // prefer the HQ re-extracted cover when one exists (make-thumbs.mjs)
+  const hq = cover.replace(/_frame(\d+)\.jpg$/, '_cover$1.jpg').replace('/work/', '');
+  if (hq !== cover.replace('/work/', '') && exists(hq)) cover = `/work/${hq}`;
 
   // hover preview — strict perceptual continuity with the card image:
   // 1) if the cover IS a video frame (postN_frameI.jpg), play THAT video;
@@ -84,7 +87,7 @@ for (const p of result.final) {
   const coverPortrait = coverDims ? coverDims.h > coverDims.w : false;
   let preview = null;
 
-  const frameMatch = coverFile.match(/^post(\d+)_frame(\d+)\.jpg$/);
+  const frameMatch = coverFile.match(/^post(\d+)_(?:frame|cover)(\d+)\.jpg$/);
   if (frameMatch) {
     const v = `post${frameMatch[1]}_video${frameMatch[2]}.mp4`;
     if (exists(v) && mb(v) <= 9) preview = `/work/${v}`;
