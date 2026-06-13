@@ -77,12 +77,16 @@ for (const p of result.final) {
   // prefer the HQ re-extracted cover when one exists (make-thumbs.mjs)
   const hq = cover.replace(/_frame(\d+)\.jpg$/, '_cover$1.jpg').replace('/work/', '');
   if (hq !== cover.replace('/work/', '') && exists(hq)) cover = `/work/${hq}`;
+  // the source cover name (jpg) is used for preview-video matching below;
+  // the shipped cover then prefers the light WebP (optimize-covers.mjs)
+  const coverFile = cover.replace('/work/', '');
+  const opt = coverFile.replace(/\.(jpg|jpeg|png)$/i, '.opt.webp');
+  if (exists(opt)) cover = `/work/${opt}`;
 
   // hover preview — strict perceptual continuity with the card image:
   // 1) if the cover IS a video frame (postN_frameI.jpg), play THAT video;
   // 2) else only a video from the same post as the cover, orientation-matched;
   // 3) otherwise no preview (a mismatched video reads as a wrong thumbnail).
-  const coverFile = cover.replace('/work/', '');
   const coverDims = dims(coverFile);
   const coverPortrait = coverDims ? coverDims.h > coverDims.w : false;
   let preview = null;

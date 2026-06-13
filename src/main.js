@@ -23,19 +23,7 @@ import { makeLabelCanvas, makeImageArtCanvas, CARD_PADS } from './textures.js';
 const R = 14;
 const FOV_BASE = 72;
 const FOV_FOCUS = 40;
-
-// phantom-style infinite wrapped grid: the world never rotates rigidly —
-// scroll offsets shift every card's angular position around the fixed
-// camera, wrapping horizontally at 2π and vertically at the grid period,
-// so cards stay upright forever and there are no poles to flip over.
-const ROW_STEP = 0.52;                // vertical angle of one grid cell
-const N_ROWS = 4;
-const COLS = 13;                      // 13 x 4 = 52 cells = 26 projects x 2
-const V_PERIOD = ROW_STEP * N_ROWS;   // vertical wrap period
 const TWO_PI = Math.PI * 2;
-const CELL_W = TWO_PI / COLS;         // horizontal angle of one grid cell
-const wrapPi = (a) => ((a % TWO_PI) + TWO_PI * 1.5) % TWO_PI - Math.PI;
-const wrapV = (a) => ((a % V_PERIOD) + V_PERIOD * 1.5) % V_PERIOD - V_PERIOD / 2;
 
 const $ = (s) => document.querySelector(s);
 const canvas = $('#gl');
@@ -44,16 +32,53 @@ const canvas = $('#gl');
 // hosted under a sub-path (e.g. GitHub Pages /repo/)
 const ASSET = (p) => import.meta.env.BASE_URL + String(p).replace(/^\//, '');
 
+/* ---------------- performance profile ----------------
+   Phones can't hold 52 cards × 2 textures at 1024px (~700MB of GPU
+   memory) — the tab gets killed before the loader clears. We detect
+   constrained devices and shrink the whole budget: one copy of each
+   project instead of two, half-size textures, no mipmaps, capped DPR. */
+const mem = navigator.deviceMemory || 8;
+const cores = navigator.hardwareConcurrency || 8;
+const coarse = window.matchMedia('(pointer: coarse)').matches;
+const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 760;
+const IS_MOBILE = coarse || smallScreen || mem <= 4 || cores <= 4;
+
+const PERF = IS_MOBILE
+  ? { dup: false, cols: 7, rows: 4, texW: 512, mipmaps: false, dpr: 1, stars: 280, antialias: false }
+  : { dup: true, cols: 13, rows: 4, texW: 1024, mipmaps: true, dpr: 2, stars: 800, antialias: true };
+
+// phantom-style infinite wrapped grid: the world never rotates rigidly —
+// scroll offsets shift every card's angular position around a fixed camera,
+// wrapping horizontally at 2π and vertically at the grid period, so cards
+// stay upright forever and there are no poles to flip over.
+const ROW_STEP = 0.52;                // vertical angle of one grid cell
+let N_ROWS = PERF.rows;
+let COLS = PERF.cols;
+let V_PERIOD = ROW_STEP * N_ROWS;     // vertical wrap period
+let CELL_W = TWO_PI / COLS;           // horizontal angle of one grid cell
+const wrapPi = (a) => ((a % TWO_PI) + TWO_PI * 1.5) % TWO_PI - Math.PI;
+const wrapV = (a) => ((a % V_PERIOD) + V_PERIOD * 1.5) % V_PERIOD - V_PERIOD / 2;
+
 /* ---------------- renderer / scene / camera ---------------- */
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: PERF.antialias, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, PERF.dpr));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x050810, 1);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(FOV_BASE, window.innerWidth / window.innerHeight, 0.1, 80);
 camera.rotation.order = 'YXZ';
-const maxAniso = renderer.capabilities.getMaxAnisotropy();
+const maxAniso = PERF.mipmaps ? renderer.capabilities.getMaxAnisotropy() : 1;
+
+// if the GPU drops the context (common on phones under memory pressure),
+// reload once rather than leaving a frozen black canvas
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  if (!sessionStorage.getItem('glreload')) {
+    sessionStorage.setItem('glreload', '1');
+    location.reload();
+  }
+}, false);
 
 /* ---------------- curved geometry ----------------
    Plane bent onto the sphere interior. yShift (world units)
@@ -95,10 +120,12 @@ async function preloadCovers(onProgress) {
 /* ---------------- build gallery ---------------- */
 const cards = []; // { group, lift, artMesh, labelMesh, artMat, labelMat, p, theta, phi, on, index, video }
 
-function buildGallery() {
-  // Phantom-style strict cell grid: 13 columns x 4 rows of equal angular
-  // cells tiling the whole wrap surface. Each card is contain-fit inside
-  // its cell; thin grid lines run along the cell boundaries.
+async function buildGallery(onProgress) {
+  // Phantom-style strict cell grid tiling the wrap surface. Each card is
+  // contain-fit inside its cell; thin grid lines run the cell boundaries.
+  // Cards are built in small batches that yield to the browser between
+  // them — the heavy texture work never blocks long enough for a phone to
+  // kill the tab, and the loader counter keeps moving.
 
   // interleave categories so neighbours differ
   const byCat = {};
@@ -108,15 +135,18 @@ function buildGallery() {
   while (ordered.length < PROJECTS.length)
     for (const q of queues) if (q.length) ordered.push(q.shift());
 
-  // Every project appears twice: copy A fills rows 0-1, copy B mirrors it
-  // in rows 2-3 shifted 6 columns (~166 deg) so copies never share a view.
+  // Desktop: every project twice (copy A rows 0-1, copy B mirrored rows 2-3,
+  // shifted half-way round so copies never share a view). Mobile: one copy.
   const place = [];
   ordered.forEach((p, i) => {
     place.push({ p, row: Math.floor(i / COLS), col: i % COLS, primary: true });
-    place.push({ p, row: Math.floor(i / COLS) + 2, col: ((i % COLS) + 6) % COLS, primary: false });
+    if (PERF.dup)
+      place.push({ p, row: Math.floor(i / COLS) + 2, col: ((i % COLS) + 6) % COLS, primary: false });
   });
 
-  place.forEach(({ p, row, col, primary }) => {
+  const yieldFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  for (let i = 0; i < place.length; i++) {
+    const { p, row, col, primary } = place[i];
     const rowPhi = (1.5 - row) * ROW_STEP;
     const img = loaded.get(p.id);
     const aspect = img
@@ -124,11 +154,12 @@ function buildGallery() {
       : 0.8;
     const cellW = CELL_W * R * Math.cos(rowPhi);
     const cellH = ROW_STEP * R;
-    // contain-fit the artwork in its cell, leaving air for the labels
     const hArt = Math.min(cellH * 0.62, (cellW * 0.8) / aspect);
     const theta = (col + 0.5) * CELL_W;
     addCard(p, img, aspect, hArt * aspect, hArt, theta, rowPhi, primary, { w: cellW, h: cellH });
-  });
+    onProgress?.((i + 1) / place.length);
+    if (i % 3 === 2) await yieldFrame(); // breathe every 3 cards
+  }
 
   addGridLines();
 }
@@ -162,7 +193,7 @@ function addGridLines() {
 
 /* far blue starfield — slow parallax behind the grid for depth */
 const stars = (() => {
-  const N = 800;
+  const N = PERF.stars;
   const pos = new Float32Array(N * 3);
   let seed = 42;
   const rnd = () => {
@@ -190,15 +221,36 @@ const stars = (() => {
   return pts;
 })();
 
+// downscale a label/art canvas to the perf texture budget and wrap it as a
+// GPU texture with the right mipmap/filter settings for this device
+function toTexture(srcCanvas) {
+  let c = srcCanvas;
+  if (PERF.texW < srcCanvas.width) {
+    const scale = PERF.texW / srcCanvas.width;
+    const d = document.createElement('canvas');
+    d.width = PERF.texW;
+    d.height = Math.max(1, Math.round(srcCanvas.height * scale));
+    const ctx = d.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(srcCanvas, 0, 0, d.width, d.height);
+    c = d;
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = maxAniso;
+  tex.generateMipmaps = PERF.mipmaps;
+  if (!PERF.mipmaps) tex.minFilter = THREE.LinearFilter;
+  return tex;
+}
+
 function addCard(p, img, aspect, w, hArt, theta, phi, primary = true, cell = null) {
   const accent = CAT_COLOR[p.cat] || '#ffffff';
 
-  // artwork layer
-  const artCanvas = img ? makeImageArtCanvas(img, aspect) : null;
+  // artwork layer (rendered straight at the device texture width)
+  const artCanvas = img ? makeImageArtCanvas(img, aspect, PERF.texW) : null;
   if (!artCanvas) return;
-  const artTex = new THREE.CanvasTexture(artCanvas);
-  artTex.colorSpace = THREE.SRGBColorSpace;
-  artTex.anisotropy = maxAniso;
+  const artTex = toTexture(artCanvas);
   const artMat = new THREE.MeshBasicMaterial({ map: artTex, transparent: true, opacity: 0 });
   const artMesh = new THREE.Mesh(curvedPlaneGeometry(w, hArt, R, 22), artMat);
 
@@ -206,9 +258,7 @@ function addCard(p, img, aspect, w, hArt, theta, phi, primary = true, cell = nul
   const { canvas: labCanvas } = makeLabelCanvas(p, aspect, accent);
   const pxToWorld = hArt / Math.round(1024 / aspect);
   const hLab = labCanvas.height * pxToWorld * (1024 / labCanvas.width); // width identical => scale by px
-  const labTex = new THREE.CanvasTexture(labCanvas);
-  labTex.colorSpace = THREE.SRGBColorSpace;
-  labTex.anisotropy = maxAniso;
+  const labTex = toTexture(labCanvas);
   const labelMat = new THREE.MeshBasicMaterial({ map: labTex, transparent: true, opacity: 0 });
   // the art region sits (bottom-top)/2 px above the label canvas centre
   const padShift = (CARD_PADS.bottom - CARD_PADS.top) / 2;
@@ -951,6 +1001,9 @@ function hideHint() {
 }
 
 /* ---------------- loader / intro ---------------- */
+const numEl = $('#loader-num');
+const setLoad = (f) => (numEl.textContent = String(Math.round(f * 100)).padStart(3, '0'));
+
 async function start() {
   try {
     await Promise.all([
@@ -961,12 +1014,16 @@ async function start() {
     ]);
   } catch { /* non-fatal */ }
 
-  // real progress: cover images drive the counter
-  const numEl = $('#loader-num');
   const t0 = performance.now();
-  await preloadCovers((f) => (numEl.textContent = String(Math.round(f * 100)).padStart(3, '0')));
+  // downloads = first 55% of the bar, texture build = the rest
+  await preloadCovers((f) => setLoad(f * 0.55));
 
-  buildGallery();
+  try {
+    await buildGallery((f) => setLoad(0.55 + f * 0.45));
+  } catch (err) {
+    console.error('gallery build failed, falling back to list', err);
+    return fallbackToList();
+  }
   buildList();
   buildFilter();
   buildCompass();
@@ -981,11 +1038,26 @@ async function start() {
     state: () => ({ mode, dragging }),
   };
 
+  sessionStorage.removeItem('glreload'); // made it past the GPU-heavy part
   requestAnimationFrame(tick);
 
-  // hold the loader briefly so the counter reads as intentional
-  const wait = Math.max(0, 900 - (performance.now() - t0));
+  const wait = Math.max(0, 700 - (performance.now() - t0));
   setTimeout(reveal, wait);
+}
+
+/* last resort: WebGL unavailable / build failed -> show the 2D list so the
+   portfolio is always viewable, even on the weakest devices */
+function fallbackToList() {
+  setLoad(1);
+  buildList();
+  buildFilter();
+  canvas.style.display = 'none';
+  $('#hint')?.remove();
+  $('#compass')?.remove();
+  $('#view-toggle')?.remove();
+  gsap.to('#loader', { opacity: 0, duration: 0.6, onComplete: () => ($('#loader').style.display = 'none') });
+  window.__app = { cards, state: () => ({ mode: 'list' }) };
+  showList();
 }
 
 function reveal() {
