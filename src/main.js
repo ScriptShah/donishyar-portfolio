@@ -144,7 +144,15 @@ async function buildGallery(onProgress) {
       place.push({ p, row: Math.floor(i / COLS) + 2, col: ((i % COLS) + 6) % COLS, primary: false });
   });
 
-  const yieldFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  // yield to the browser between batches — but resume on EITHER a frame or a
+  // short timeout, so the build never stalls if the tab is backgrounded
+  // (requestAnimationFrame fully pauses when the page isn't visible).
+  const yieldFrame = () => new Promise((r) => {
+    let done = false;
+    const fin = () => { if (!done) { done = true; r(); } };
+    requestAnimationFrame(fin);
+    setTimeout(fin, 40);
+  });
   for (let i = 0; i < place.length; i++) {
     const { p, row, col, primary } = place[i];
     const rowPhi = (1.5 - row) * ROW_STEP;
