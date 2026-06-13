@@ -7,3 +7,9 @@ work-archive/
 *.tmp.mp4
 Thumbs.db
 .DS_Store
+
+# scratch verification screenshots (never assets — those live in public/work/)
+/*.jpg
+/*.jpeg
+/*.png
+/*.webp
